@@ -1,15 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  reactStrictMode: true,
-  async rewrites() {
-    return [
-      {
-        source: '/api/:path*',
-        destination: 'http://localhost:5001/api/:path*',
-      },
-    ];
-  },
+    reactStrictMode: true,
+    async rewrites() {
+        return [
+            {
+                source: '/api/:path*',
+                destination:
+                    'project-ifusd1oxl-jashan-gargs-projects.vercel.app/api/:path*',
+            },
+        ];
+    },
 };
 
-module.exports = nextConfig;
-
+export default nextConfig;
