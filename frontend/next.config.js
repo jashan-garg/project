@@ -6,7 +6,7 @@ const nextConfig = {
             {
                 source: '/api/:path*',
                 destination:
-                    'https://project-ifusd1oxl-jashan-gargs-projects.vercel.app/api/:path*',
+                    'https://project-eight-psi-14.vercel.app/api/:path*',
             },
         ];
     },
