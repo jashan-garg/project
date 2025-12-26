@@ -8,7 +8,7 @@ export const AuthContext = createContext();
 const API_URL =
     typeof window !== 'undefined'
         ? '/api'
-        : 'project-ifusd1oxl-jashan-gargs-projects.vercel.app/api';
+        : 'https://project-ifusd1oxl-jashan-gargs-projects.vercel.app/api';
 
 // Configure axios defaults
 if (typeof window !== 'undefined') {
