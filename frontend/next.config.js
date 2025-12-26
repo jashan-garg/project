@@ -5,8 +5,7 @@ const nextConfig = {
         return [
             {
                 source: '/api/:path*',
-                destination:
-                    'https://project-eight-psi-14.vercel.app/api/:path*',
+                destination: 'https://localhost:5001/api/:path*',
             },
         ];
     },

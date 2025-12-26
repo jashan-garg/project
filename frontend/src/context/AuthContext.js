@@ -6,9 +6,7 @@ import axios from 'axios';
 export const AuthContext = createContext();
 
 const API_URL =
-    typeof window !== 'undefined'
-        ? '/api'
-        : 'https://project-eight-psi-14.vercel.app/api';
+    typeof window !== 'undefined' ? '/api' : 'http://localhost:5001/api';
 
 // Configure axios defaults
 if (typeof window !== 'undefined') {
