@@ -1,0 +1,1217 @@
+require('dotenv').config();
+const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
+
+const User = require('./models/User');
+const Doctor = require('./models/Doctor');
+
+const MONGO_URI = process.env.MONGODB_URI;
+
+const users = [
+    {
+        name: 'John Doe',
+        email: 'john@example.com',
+        password: 'password123',
+        role: 'patient',
+        phone: '9876543210',
+        address: '123 Street, London',
+    },
+    {
+        name: 'Dr. Emily Carter',
+        email: 'emily@example.com',
+        password: 'password123',
+        role: 'doctor',
+        phone: '9876543211',
+    },
+    {
+        name: 'Dr. Michael Adams',
+        email: 'michael@example.com',
+        password: 'password123',
+        role: 'doctor',
+        phone: '9876543212',
+    },
+    {
+        name: 'Admin User',
+        email: 'admin@example.com',
+        password: 'adminpass',
+        role: 'admin',
+    },
+];
+
+const doctors = [
+    {
+        specialization: 'Cardiologist',
+        experience: 7,
+        qualifications: 'MBBS, MD Cardiology',
+        consultationFee: 500,
+        bio: 'Experienced cardiologist dedicated to preventive and interventional treatment.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '18:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '18:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '18:00' },
+            friday: { available: true, startTime: '10:00', endTime: '18:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Dermatologist',
+        experience: 4,
+        qualifications: 'MBBS, MD Dermatology',
+        consultationFee: 400,
+        bio: 'Skin specialist with expertise in acne, laser treatments and cosmetic dermatology.',
+        availability: {
+            monday: { available: true, startTime: '11:00', endTime: '17:00' },
+            tuesday: { available: true, startTime: '11:00', endTime: '17:00' },
+            wednesday: {
+                available: true,
+                startTime: '11:00',
+                endTime: '17:00',
+            },
+            thursday: { available: false },
+            friday: { available: false },
+            saturday: { available: true, startTime: '10:00', endTime: '15:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Orthopedic Surgeon',
+        experience: 9,
+        qualifications: 'MBBS, MS Orthopedics',
+        consultationFee: 550,
+        bio: 'Expert orthopedic surgeon focused on joint replacement and sports injuries.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '16:00' },
+            tuesday: { available: true, startTime: '09:00', endTime: '16:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '17:00' },
+            friday: { available: true, startTime: '09:00', endTime: '16:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+
+    {
+        specialization: 'Neurologist',
+        experience: 6,
+        qualifications: 'MBBS, DM Neurology',
+        consultationFee: 600,
+        bio: 'Neurologist specializing in migraine, stroke, nerve disorders, and epilepsy.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '15:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '15:00',
+            },
+            thursday: { available: true, startTime: '12:00', endTime: '18:00' },
+            friday: { available: true, startTime: '10:00', endTime: '15:00' },
+            saturday: { available: true, startTime: '11:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+
+    {
+        specialization: 'Pediatrician',
+        experience: 5,
+        qualifications: 'MBBS, MD Pediatrics',
+        consultationFee: 350,
+        bio: 'Pediatrician passionate about children’s health, vaccinations, and growth monitoring.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '14:00' },
+            tuesday: { available: true, startTime: '09:00', endTime: '14:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '09:00', endTime: '14:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+
+    {
+        specialization: 'Gynecologist',
+        experience: 10,
+        qualifications: 'MBBS, MS Gynecology',
+        consultationFee: 450,
+        bio: "Experienced gynecologist providing comprehensive care for women's health.",
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '18:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '18:00' },
+            friday: { available: true, startTime: '10:00', endTime: '18:00' },
+            saturday: { available: true, startTime: '11:00', endTime: '15:00' },
+            sunday: { available: false },
+        },
+    },
+
+    {
+        specialization: 'ENT Specialist',
+        experience: 3,
+        qualifications: 'MBBS, MS ENT',
+        consultationFee: 300,
+        bio: 'ENT doctor skilled in sinus issues, hearing loss, allergies, and throat disorders.',
+        availability: {
+            monday: { available: true, startTime: '12:00', endTime: '18:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '12:00',
+                endTime: '18:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '17:00' },
+            friday: { available: true, startTime: '12:00', endTime: '18:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+
+    {
+        specialization: 'Gastroenterologist',
+        experience: 8,
+        qualifications: 'MBBS, DM Gastroenterology',
+        consultationFee: 650,
+        bio: 'Gastroenterologist specializing in digestive issues, liver diseases and endoscopy.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '16:00' },
+            tuesday: { available: true, startTime: '09:00', endTime: '16:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '14:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '09:00', endTime: '16:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Endocrinologist',
+        experience: 11,
+        qualifications: 'MBBS, MD Endocrinology',
+        consultationFee: 550,
+        bio: 'Specialist in thyroid disorders, diabetes management, and hormonal imbalance.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '14:00' },
+            tuesday: { available: true, startTime: '12:00', endTime: '17:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '09:00', endTime: '14:00' },
+            friday: { available: true, startTime: '10:00', endTime: '15:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Psychiatrist',
+        experience: 9,
+        qualifications: 'MBBS, MD Psychiatry',
+        consultationFee: 650,
+        bio: 'Expert in mental health management including anxiety, depression, and behavioral issues.',
+        availability: {
+            monday: { available: true, startTime: '11:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '11:00', endTime: '18:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '12:00', endTime: '19:00' },
+            friday: { available: true, startTime: '11:00', endTime: '18:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '15:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Ophthalmologist',
+        experience: 6,
+        qualifications: 'MBBS, MS Ophthalmology',
+        consultationFee: 400,
+        bio: 'Eye specialist focused on cataract surgery, vision correction, and retinal diseases.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '13:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '16:00' },
+            wednesday: {
+                available: true,
+                startTime: '09:00',
+                endTime: '13:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Oncologist',
+        experience: 14,
+        qualifications: 'MBBS, DM Oncology',
+        consultationFee: 800,
+        bio: 'Cancer specialist with experience in chemotherapy, immunotherapy, and radiation planning.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '17:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '17:00',
+            },
+            thursday: { available: true, startTime: '11:00', endTime: '18:00' },
+            friday: { available: true, startTime: '10:00', endTime: '17:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Nephrologist',
+        experience: 8,
+        qualifications: 'MBBS, DM Nephrology',
+        consultationFee: 700,
+        bio: 'Kidney specialist focusing on dialysis care, kidney failure, and transplant evaluations.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '15:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '16:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '09:00', endTime: '15:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Pulmonologist',
+        experience: 5,
+        qualifications: 'MBBS, MD Pulmonology',
+        consultationFee: 450,
+        bio: 'Specialist in asthma, COPD, lung infections, and respiratory therapy.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '16:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '12:00',
+                endTime: '18:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Rheumatologist',
+        experience: 12,
+        qualifications: 'MBBS, DM Rheumatology',
+        consultationFee: 600,
+        bio: 'Rheumatology expert treating arthritis, autoimmune diseases, and chronic joint pain.',
+        availability: {
+            monday: { available: false },
+            tuesday: { available: true, startTime: '11:00', endTime: '17:00' },
+            wednesday: {
+                available: true,
+                startTime: '11:00',
+                endTime: '17:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '11:00', endTime: '17:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Urologist',
+        experience: 7,
+        qualifications: 'MBBS, MS Urology',
+        consultationFee: 550,
+        bio: 'Expert in kidney stones, urinary disorders, and male reproductive health.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '14:00' },
+            tuesday: { available: true, startTime: '11:00', endTime: '17:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '09:00', endTime: '14:00' },
+            friday: { available: true, startTime: '11:00', endTime: '17:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'General Physician',
+        experience: 3,
+        qualifications: 'MBBS',
+        consultationFee: 250,
+        bio: 'General physician providing diagnosis and treatment for everyday illnesses.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '18:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '18:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '10:00', endTime: '18:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Hematologist',
+        experience: 10,
+        qualifications: 'MBBS, DM Hematology',
+        consultationFee: 700,
+        bio: 'Specialist in blood disorders, anemia, lymphoma, and bone marrow treatments.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '15:00' },
+            tuesday: { available: true, startTime: '09:00', endTime: '15:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '09:00', endTime: '15:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Physiotherapist',
+        experience: 4,
+        qualifications: 'BPT, MPT',
+        consultationFee: 300,
+        bio: 'Physiotherapist specializing in pain relief, rehabilitation, and posture correction.',
+        availability: {
+            monday: { available: true, startTime: '12:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '12:00', endTime: '18:00' },
+            wednesday: {
+                available: true,
+                startTime: '12:00',
+                endTime: '18:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '12:00', endTime: '18:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Dentist',
+        experience: 6,
+        qualifications: 'BDS, MDS',
+        consultationFee: 350,
+        bio: 'Dental expert in root canals, cosmetic dentistry, and oral hygiene care.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '16:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '17:00' },
+            wednesday: {
+                available: true,
+                startTime: '09:00',
+                endTime: '16:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '10:00', endTime: '17:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Radiologist',
+        experience: 8,
+        qualifications: 'MBBS, MD Radiology',
+        consultationFee: 600,
+        bio: 'Radiologist with expertise in MRI, CT, ultrasound, and diagnostic imaging.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '15:00' },
+            tuesday: { available: true, startTime: '11:00', endTime: '17:00' },
+            wednesday: {
+                available: true,
+                startTime: '09:00',
+                endTime: '15:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '11:00', endTime: '17:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Plastic Surgeon',
+        experience: 12,
+        qualifications: 'MBBS, MCh Plastic Surgery',
+        consultationFee: 900,
+        bio: 'Plastic surgeon specializing in reconstructive and cosmetic procedures.',
+        availability: {
+            monday: { available: false },
+            tuesday: { available: true, startTime: '10:00', endTime: '16:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: true, startTime: '11:00', endTime: '18:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Allergist',
+        experience: 6,
+        qualifications: 'MBBS, MD Allergy & Immunology',
+        consultationFee: 450,
+        bio: 'Allergy specialist managing asthma, food allergies, sinus issues and skin sensitivities.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '17:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '11:00',
+                endTime: '18:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '17:00' },
+            friday: { available: true, startTime: '10:00', endTime: '17:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Infectious Disease Specialist',
+        experience: 15,
+        qualifications: 'MBBS, MD Infectious Diseases',
+        consultationFee: 700,
+        bio: 'Specialist in infectious diseases, antibiotic therapy, and immunocompromised patient care.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '14:00' },
+            tuesday: { available: true, startTime: '09:00', endTime: '14:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '09:00', endTime: '14:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Nutritionist',
+        experience: 4,
+        qualifications: 'BSc, MSc Clinical Nutrition',
+        consultationFee: 250,
+        bio: 'Nutrition expert focused on weight management, dietary planning, and lifestyle improvement.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '18:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '11:00', endTime: '17:00' },
+            friday: { available: true, startTime: '10:00', endTime: '18:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Chiropractor',
+        experience: 7,
+        qualifications: 'Doctor of Chiropractic',
+        consultationFee: 400,
+        bio: 'Chiropractor specializing in spinal adjustments, mobility therapy, and chronic pain relief.',
+        availability: {
+            monday: { available: true, startTime: '12:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '12:00', endTime: '18:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '12:00', endTime: '18:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'General Surgeon',
+        experience: 13,
+        qualifications: 'MBBS, MS General Surgery',
+        consultationFee: 600,
+        bio: 'Experienced surgeon handling gallbladder, appendix, hernia and laparoscopic surgeries.',
+        availability: {
+            monday: { available: false },
+            tuesday: { available: true, startTime: '09:00', endTime: '15:00' },
+            wednesday: {
+                available: true,
+                startTime: '09:00',
+                endTime: '15:00',
+            },
+            thursday: { available: true, startTime: '11:00', endTime: '17:00' },
+            friday: { available: true, startTime: '09:00', endTime: '15:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Hepatologist',
+        experience: 9,
+        qualifications: 'MBBS, DM Hepatology',
+        consultationFee: 650,
+        bio: 'Liver specialist treating hepatitis, cirrhosis, fatty liver, and transplant evaluations.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '15:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '15:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '15:00' },
+            friday: { available: true, startTime: '11:00', endTime: '17:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Geriatrician',
+        experience: 14,
+        qualifications: 'MBBS, MD Geriatric Medicine',
+        consultationFee: 500,
+        bio: 'Specialist in elderly care, managing chronic conditions and overall wellness.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '13:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '14:00',
+            },
+            thursday: { available: true, startTime: '11:00', endTime: '17:00' },
+            friday: { available: true, startTime: '10:00', endTime: '14:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Sports Medicine Specialist',
+        experience: 6,
+        qualifications: 'MBBS, Diploma in Sports Medicine',
+        consultationFee: 450,
+        bio: 'Expert in athletic injuries, performance therapy, and rehabilitation strategies.',
+        availability: {
+            monday: { available: true, startTime: '12:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '16:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '12:00', endTime: '18:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Pain Management Specialist',
+        experience: 11,
+        qualifications: 'MBBS, MD Pain Medicine',
+        consultationFee: 500,
+        bio: 'Pain specialist treating chronic pain, nerve pain, musculoskeletal disorders, and migraines.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '15:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: true, startTime: '11:00', endTime: '17:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Vascular Surgeon',
+        experience: 10,
+        qualifications: 'MBBS, MCh Vascular Surgery',
+        consultationFee: 750,
+        bio: 'Specialist in artery and vein disorders, minimally invasive vascular procedures.',
+        availability: {
+            monday: { available: false },
+            tuesday: { available: true, startTime: '10:00', endTime: '16:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: true, startTime: '12:00', endTime: '18:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Neonatologist',
+        experience: 9,
+        qualifications: 'MBBS, MD Pediatrics, Fellowship in Neonatology',
+        consultationFee: 800,
+        bio: 'Specialist in newborn critical care, premature babies, and neonatal ICU support.',
+        availability: {
+            monday: { available: true, startTime: '08:00', endTime: '13:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '09:00',
+                endTime: '14:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '09:00', endTime: '14:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Occupational Therapist',
+        experience: 5,
+        qualifications: 'BOT, MOT',
+        consultationFee: 300,
+        bio: 'Helps patients regain motor skills, improve function, and recover from injuries.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '17:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '17:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '17:00' },
+            friday: { available: true, startTime: '10:00', endTime: '17:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Podiatrist',
+        experience: 7,
+        qualifications: 'DPM, Podiatry Medicine',
+        consultationFee: 350,
+        bio: 'Foot and ankle specialist treating heel pain, deformities, and diabetic foot conditions.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '15:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '09:00', endTime: '15:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Immunologist',
+        experience: 12,
+        qualifications: 'MBBS, MD Immunology',
+        consultationFee: 700,
+        bio: 'Immunology specialist treating autoimmune disorders, chronic allergies, and immune dysfunction.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '16:00' },
+            tuesday: { available: true, startTime: '11:00', endTime: '17:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '11:00', endTime: '17:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Reproductive Endocrinologist',
+        experience: 10,
+        qualifications: 'MBBS, MD Reproductive Medicine',
+        consultationFee: 900,
+        bio: 'Fertility specialist handling IVF, hormonal treatments, and reproductive health.',
+        availability: {
+            monday: { available: false },
+            tuesday: { available: true, startTime: '10:00', endTime: '16:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: true, startTime: '11:00', endTime: '17:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Sleep Medicine Specialist',
+        experience: 9,
+        qualifications: 'MBBS, MD Pulmonology, Sleep Medicine Fellowship',
+        consultationFee: 500,
+        bio: 'Specialist in insomnia, sleep apnea, circadian disorders, and sleep-related breathing issues.',
+        availability: {
+            monday: { available: true, startTime: '12:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '12:00', endTime: '18:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '12:00', endTime: '18:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Osteopath',
+        experience: 6,
+        qualifications: 'DO, Osteopathic Medicine',
+        consultationFee: 450,
+        bio: 'Osteopath focused on holistic healing, joint manipulation, and muscular alignment.',
+        availability: {
+            monday: { available: false },
+            tuesday: { available: true, startTime: '09:00', endTime: '15:00' },
+            wednesday: {
+                available: true,
+                startTime: '09:00',
+                endTime: '15:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '09:00', endTime: '15:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Clinical Pharmacologist',
+        experience: 8,
+        qualifications: 'MBBS, MD Pharmacology',
+        consultationFee: 350,
+        bio: 'Expert in medication therapy, drug interactions, and clinical treatment optimization.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '17:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '17:00' },
+            wednesday: {
+                available: true,
+                startTime: '09:00',
+                endTime: '14:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '10:00', endTime: '17:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Cardiothoracic Surgeon',
+        experience: 15,
+        qualifications: 'MBBS, MS General Surgery, MCh Cardiothoracic Surgery',
+        consultationFee: 1200,
+        bio: 'Expert surgeon specializing in heart, lung, and thoracic surgeries with over a decade of experience.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '14:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: true, startTime: '09:00', endTime: '14:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Pediatric Cardiologist',
+        experience: 9,
+        qualifications:
+            'MBBS, MD Pediatrics, Fellowship in Pediatric Cardiology',
+        consultationFee: 900,
+        bio: 'Specialist in congenital heart diseases, pediatric arrhythmias, and cardiac imaging.',
+        availability: {
+            monday: { available: false },
+            tuesday: { available: true, startTime: '10:00', endTime: '17:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '17:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '11:00', endTime: '18:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Breast Surgeon',
+        experience: 11,
+        qualifications: 'MBBS, MS Surgery, Fellowship in Breast Oncology',
+        consultationFee: 600,
+        bio: 'Specialized in breast cancer surgery, reconstructive procedures, and breast health.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '15:00' },
+            tuesday: { available: true, startTime: '09:00', endTime: '15:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '11:00', endTime: '17:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Colorectal Surgeon',
+        experience: 8,
+        qualifications: 'MBBS, MS Surgery, Fellowship in Colorectal Surgery',
+        consultationFee: 700,
+        bio: 'Expert in treating colorectal cancers, hemorrhoids, and minimally invasive bowel surgeries.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '16:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '09:00',
+                endTime: '14:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Andrologist',
+        experience: 7,
+        qualifications: 'MBBS, MS Urology, Fellowship in Andrology',
+        consultationFee: 550,
+        bio: 'Male reproductive health specialist focusing on infertility, hormonal issues, and sexual dysfunction.',
+        availability: {
+            monday: { available: true, startTime: '12:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '16:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '12:00', endTime: '18:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Interventional Cardiologist',
+        experience: 13,
+        qualifications:
+            'MBBS, MD Cardiology, Fellowship in Interventional Cardiology',
+        consultationFee: 1100,
+        bio: 'Expert in angioplasty, stent placement, and advanced cardiac interventions.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '15:00' },
+            tuesday: { available: true, startTime: '09:00', endTime: '14:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '15:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '10:00', endTime: '15:00' },
+            saturday: { available: true, startTime: '09:00', endTime: '12:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Medical Geneticist',
+        experience: 6,
+        qualifications: 'MBBS, MD Genetics',
+        consultationFee: 650,
+        bio: 'Specialist in genetic disorders, counseling, and advanced genomic diagnostics.',
+        availability: {
+            monday: { available: false },
+            tuesday: { available: true, startTime: '11:00', endTime: '17:00' },
+            wednesday: {
+                available: true,
+                startTime: '11:00',
+                endTime: '17:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '15:00' },
+            friday: { available: true, startTime: '11:00', endTime: '17:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Nuclear Medicine Specialist',
+        experience: 10,
+        qualifications: 'MBBS, MD Nuclear Medicine',
+        consultationFee: 850,
+        bio: 'Expert in PET scans, radionuclide therapy, and advanced imaging techniques.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '14:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '14:00' },
+            wednesday: {
+                available: true,
+                startTime: '11:00',
+                endTime: '17:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '11:00', endTime: '17:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Medical Oncologist',
+        experience: 12,
+        qualifications: 'MBBS, DM Oncology',
+        consultationFee: 900,
+        bio: 'Specialist in chemotherapy, immunotherapy, and cancer treatment planning.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '14:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: true, startTime: '09:00', endTime: '14:00' },
+            friday: { available: true, startTime: '11:00', endTime: '17:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Otolaryngologist (ENT)',
+        experience: 5,
+        qualifications: 'MBBS, MS ENT',
+        consultationFee: 350,
+        bio: 'ENT specialist handling sinus surgery, ear disorders, allergies, and throat conditions.',
+        availability: {
+            monday: { available: true, startTime: '12:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '12:00', endTime: '18:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '12:00', endTime: '18:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Oral Surgeon',
+        experience: 9,
+        qualifications: 'BDS, MDS Oral Surgery',
+        consultationFee: 450,
+        bio: 'Oral surgeon specializing in wisdom tooth extraction, jaw surgery, and oral pathologies.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '16:00' },
+            tuesday: { available: true, startTime: '09:00', endTime: '16:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '17:00' },
+            friday: { available: true, startTime: '10:00', endTime: '17:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Endoscopic Surgeon',
+        experience: 11,
+        qualifications: 'MBBS, MS Surgery, Fellowship in Endoscopy',
+        consultationFee: 750,
+        bio: 'Expert in minimally invasive endoscopic procedures for digestive and abdominal conditions.',
+        availability: {
+            monday: { available: false },
+            tuesday: { available: true, startTime: '11:00', endTime: '17:00' },
+            wednesday: {
+                available: true,
+                startTime: '11:00',
+                endTime: '17:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Critical Care Specialist',
+        experience: 14,
+        qualifications: 'MBBS, MD Critical Care',
+        consultationFee: 800,
+        bio: 'Intensive care specialist trained in emergency response, ventilation, and advanced ICU care.',
+        availability: {
+            monday: { available: true, startTime: '12:00', endTime: '18:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '16:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '12:00', endTime: '18:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Occupational Lung Specialist',
+        experience: 8,
+        qualifications:
+            'MBBS, MD Pulmonology, Occupational Lung Disease Fellowship',
+        consultationFee: 600,
+        bio: 'Specialist in asthma, COPD, occupational exposure, and lung rehabilitation.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '16:00' },
+            tuesday: { available: false },
+            wednesday: {
+                available: true,
+                startTime: '11:00',
+                endTime: '17:00',
+            },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Internal Medicine Specialist',
+        experience: 10,
+        qualifications: 'MBBS, MD Internal Medicine',
+        consultationFee: 500,
+        bio: 'Experienced internal medicine physician treating chronic diseases and complex conditions.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '15:00' },
+            tuesday: { available: true, startTime: '11:00', endTime: '17:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Dermatosurgeon',
+        experience: 9,
+        qualifications: 'MBBS, MD Dermatology, Fellowship in Dermatosurgery',
+        consultationFee: 550,
+        bio: 'Specialist in skin surgeries, mole removal, cosmetic procedures, and advanced dermatology.',
+        availability: {
+            monday: { available: true, startTime: '11:00', endTime: '17:00' },
+            tuesday: { available: true, startTime: '11:00', endTime: '17:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '10:00', endTime: '16:00' },
+            friday: { available: true, startTime: '11:00', endTime: '17:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '14:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Diabetologist',
+        experience: 7,
+        qualifications: 'MBBS, MD Internal Medicine, Fellowship in Diabetology',
+        consultationFee: 450,
+        bio: 'Expert in diabetes management, lifestyle planning, and treatment of endocrine disorders.',
+        availability: {
+            monday: { available: false },
+            tuesday: { available: true, startTime: '10:00', endTime: '16:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '11:00', endTime: '17:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Gastrointestinal Surgeon',
+        experience: 12,
+        qualifications: 'MBBS, MS GI Surgery',
+        consultationFee: 900,
+        bio: 'Expert surgeon handling advanced GI conditions, endoscopy, and minimally invasive procedures.',
+        availability: {
+            monday: { available: true, startTime: '09:00', endTime: '15:00' },
+            tuesday: { available: true, startTime: '09:00', endTime: '15:00' },
+            wednesday: {
+                available: true,
+                startTime: '10:00',
+                endTime: '16:00',
+            },
+            thursday: { available: false },
+            friday: { available: true, startTime: '11:00', endTime: '17:00' },
+            saturday: { available: false },
+            sunday: { available: false },
+        },
+    },
+    {
+        specialization: 'Epileptologist',
+        experience: 10,
+        qualifications: 'MBBS, DM Neurology, Fellowship in Epilepsy',
+        consultationFee: 700,
+        bio: 'Neurology specialist focusing on epilepsy diagnosis, EEG, and seizure management.',
+        availability: {
+            monday: { available: true, startTime: '10:00', endTime: '16:00' },
+            tuesday: { available: true, startTime: '10:00', endTime: '16:00' },
+            wednesday: { available: false },
+            thursday: { available: true, startTime: '11:00', endTime: '17:00' },
+            friday: { available: true, startTime: '10:00', endTime: '16:00' },
+            saturday: { available: true, startTime: '10:00', endTime: '13:00' },
+            sunday: { available: false },
+        },
+    },
+];
+
+const seedDatabase = async () => {
+    try {
+        console.log('Connecting to MongoDB...');
+        await mongoose.connect(MONGO_URI);
+        console.log('✔ MongoDB Connected');
+
+        console.log('\n🔥 Clearing old data...');
+        await User.deleteMany({});
+        await Doctor.deleteMany({});
+        console.log('✔ Old Users & Doctors removed');
+
+        console.log('\n📌 Creating Users...');
+        const createdUsers = [];
+
+        for (let user of users) {
+            const hashedPassword = await bcrypt.hash(user.password, 10);
+            const newUser = await User.create({
+                ...user,
+                password: hashedPassword,
+            });
+            createdUsers.push(newUser);
+        }
+
+        console.log(`✔ ${createdUsers.length} Users inserted`);
+
+        console.log('\n📌 Creating Doctor Profiles...');
+
+        const doctorUsers = createdUsers.filter((u) => u.role === 'doctor');
+        let doctorUserIndex = 0;
+
+        for (let i = 0; i < doctors.length; i++) {
+            let doctorUser = doctorUsers[doctorUserIndex];
+
+            if (!doctorUser) {
+                // AUTO-CREATE USER FOR THIS DOCTOR
+                const autoUser = await User.create({
+                    name: `Auto Doctor ${i + 1}`,
+                    email: `autodoctor${i + 1}@example.com`,
+                    password: await bcrypt.hash('password123', 10),
+                    role: 'doctor',
+                });
+
+                doctorUser = autoUser;
+            }
+
+            // Assign doctor profile
+            await Doctor.create({
+                ...doctors[i],
+                userId: doctorUser._id,
+            });
+
+            doctorUserIndex++;
+        }
+
+        console.log(
+            '✔ All doctor profiles created (including auto-created users)'
+        );
+        console.log('\n🎉 Database Seeded Successfully!');
+        process.exit(0);
+    } catch (err) {
+        console.error('\n❌ Error seeding database:', err);
+        process.exit(1);
+    }
+};
+
+seedDatabase();
