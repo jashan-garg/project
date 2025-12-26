@@ -13,7 +13,7 @@ app.use(express.json());
 mongoose
     .connect(
         process.env.MONGODB_URI ||
-            'mongodb://localhost:27017/doctor-appointments',
+            'mongodb+srv://jashangarg961_db_user:qwertyuiop1234567890@cluster0.r4w8enw.mongodb.net/?appName=Cluster0',
         {
             useNewUrlParser: true,
             useUnifiedTopology: true,
